@@ -2,296 +2,211 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Globe, Package, Handshake, Truck, Mail, Phone, MapPin, Send, ChevronRight, Menu, X } from 'lucide-react';
-import { getProducts, Product, addInquiry } from '@/lib/db';
+import { ArrowRight, Globe, Package, Handshake, Truck, Loader2, Send } from 'lucide-react';
+import { getProducts, getCategories, Product, Category, addInquiry } from '@/lib/db';
 
-export default function Home() {
-  const [lang, setLang] = useState<'en' | 'zh'>('en');
+export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '', email: '', phone: '', country: '', company: '', product: '', message: ''
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [lang, setLang] = useState<'en' | 'zh'>('en');
+  const [inquiryForm, setInquiryForm] = useState({
+    name: '', email: '', phone: '', country: '', message: ''
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
-    loadProducts();
+    loadData();
   }, []);
 
-  const loadProducts = async () => {
-    const data = await getProducts();
-    setProducts(data.filter(p => p.status === 'active').slice(0, 8));
+  const loadData = async () => {
+    try {
+      const [prods, cats] = await Promise.all([
+        getProducts(),
+        getCategories()
+      ]);
+      setProducts(prods.filter(p => p.status === 'active').slice(0, 6));
+      setCategories(cats.filter(c => c.visible).slice(0, 4));
+    } catch (e) {
+      console.error('Error loading data:', e);
+    }
+    setLoading(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleInquirySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     try {
       await addInquiry({
         customerId: null,
-        customerName: formData.name,
-        customerEmail: formData.email,
-        customerPhone: formData.phone,
-        customerCountry: formData.country,
+        customerName: inquiryForm.name,
+        customerEmail: inquiryForm.email,
+        customerPhone: inquiryForm.phone,
+        customerCountry: inquiryForm.country,
         productId: null,
-        productName: formData.product,
-        message: formData.message,
+        productName: '',
+        message: inquiryForm.message,
         status: 'new'
       });
       setSubmitted(true);
-      setFormData({ name: '', email: '', phone: '', country: '', company: '', product: '', message: '' });
-      setTimeout(() => setSubmitted(false), 5000);
-    } catch (error) {
-      alert('Error submitting inquiry');
+      setInquiryForm({ name: '', email: '', phone: '', country: '', message: '' });
+    } catch (e) {
+      alert('Failed to submit inquiry');
     }
     setSubmitting(false);
   };
 
-  const t = {
-    en: {
-      nav: { home: 'Home', products: 'Products', about: 'About', contact: 'Contact' },
-      hero: { title: 'Connecting Businesses Across Borders', subtitle: 'Your trusted partner for international B2B trade. Premium products, reliable suppliers, and seamless transactions.', cta: 'Explore Products', cta2: 'Contact Us' },
-      services: { title: 'Our Services', items: [
-        { icon: Globe, title: 'Global Trade', desc: 'Access markets worldwide with our extensive network of suppliers and buyers across 50+ countries.' },
-        { icon: Package, title: 'Product Sourcing', desc: 'Find the perfect products for your business. We handle quality control, negotiation, and logistics.' },
-        { icon: Handshake, title: 'Business Partnership', desc: 'Build long-term relationships with verified suppliers. We facilitate trust and transparency.' },
-        { icon: Truck, title: 'Logistics Support', desc: 'End-to-end shipping solutions. From factory to your warehouse, we handle it all.' }
-      ]},
-      products: { title: 'Featured Products', viewAll: 'View All Products', inquire: 'Inquire Now' },
-      contact: { title: 'Get In Touch', subtitle: 'Send us your inquiry and we\'ll get back to you within 24 hours', name: 'Your Name', email: 'Email Address', phone: 'Phone Number', country: 'Country', company: 'Company Name', product: 'Product Interest', message: 'Your Message', send: 'Send Inquiry', sending: 'Sending...', sent: 'Inquiry Sent Successfully!' },
-      footer: { company: 'ALOKAIBI INTERNATIONAL TRADING LIMITED', desc: 'Your trusted partner for international B2B trade', rights: 'All rights reserved.' }
-    },
-    zh: {
-      nav: { home: '首页', products: '产品', about: '关于我们', contact: '联系我们' },
-      hero: { title: '连接全球贸易', subtitle: '您值得信赖的国际B2B贸易伙伴。优质产品、可靠供应商、无缝交易。', cta: '浏览产品', cta2: '联系我们' },
-      services: { title: '我们的服务', items: [
-        { icon: Globe, title: '全球贸易', desc: '通过我们遍布50多个国家的供应商和买家网络,开拓全球市场。' },
-        { icon: Package, title: '产品采购', desc: '为您的企业寻找完美产品。我们负责质量控制、谈判和物流。' },
-        { icon: Handshake, title: '商业合作', desc: '与经过验证的供应商建立长期合作关系。我们促进信任和透明度。' },
-        { icon: Truck, title: '物流支持', desc: '端到端运输解决方案。从工厂到您的仓库,我们全程处理。' }
-      ]},
-      products: { title: '精选产品', viewAll: '查看所有产品', inquire: '立即询盘' },
-      contact: { title: '联系我们', subtitle: '发送您的询盘,我们将在24小时内回复', name: '您的姓名', email: '邮箱地址', phone: '电话号码', country: '国家', company: '公司名称', product: '感兴趣的产品', message: '您的留言', send: '发送询盘', sending: '发送中...', sent: '询盘发送成功!' },
-      footer: { company: '阿洛卡比国际贸易有限公司', desc: '您值得信赖的国际B2B贸易伙伴', rights: '版权所有。' }
-    }
-  }[lang];
+  const services = [
+    { icon: <Globe size={32} />, titleEn: 'Global Trade', titleZh: '全球贸易', descEn: 'Connecting markets worldwide with efficient supply chain solutions.', descZh: '连接全球市场，提供高效的供应链解决方案。' },
+    { icon: <Package size={32} />, titleEn: 'Product Sourcing', titleZh: '产品采购', descEn: 'Quality products from verified manufacturers.', descZh: '来自认证制造商的优质产品。' },
+    { icon: <Handshake size={32} />, titleEn: 'Business Partnership', titleZh: '商业合作', descEn: 'Long-term partnerships built on trust.', descZh: '建立在信任基础上的长期合作伙伴关系。' },
+    { icon: <Truck size={32} />, titleEn: 'Logistics Support', titleZh: '物流支持', descEn: 'End-to-end logistics coordination.', descZh: '端到端的物流协调。' }
+  ];
 
   return (
-    <div style={{ background: '#0a1628', color: 'white', minHeight: '100vh' }}>
-      {/* Navigation */}
-      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, background: 'rgba(10, 22, 40, 0.95)', backdropFilter: 'blur(10px)', zIndex: 100, borderBottom: '1px solid rgba(201, 168, 76, 0.2)' }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px', height: '70px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none' }}>
-            <span style={{ fontSize: '32px' }}>🏢</span>
-            <span style={{ fontSize: '22px', fontWeight: '700', color: '#c9a84c' }}>ALOKAIBI</span>
+    <div style={{ background: '#0a1628', minHeight: '100vh', color: '#fff' }}>
+      {/* Header */}
+      <header style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: 'rgba(10, 22, 40, 0.95)', backdropFilter: 'blur(10px)', borderBottom: '1px solid rgba(201, 168, 76, 0.2)' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Link href="/" style={{ fontSize: '24px', fontWeight: '700', color: '#c9a84c', textDecoration: 'none' }}>
+            ALOKAIBI
           </Link>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-            <div style={{ display: 'flex', gap: '32px' }} className="nav-links">
-              <Link href="/" style={{ color: '#fff', textDecoration: 'none', fontSize: '15px', fontWeight: '500', opacity: 0.9, transition: 'opacity 0.2s' }}>{t.nav.home}</Link>
-              <Link href="/products" style={{ color: '#fff', textDecoration: 'none', fontSize: '15px', fontWeight: '500', opacity: 0.9, transition: 'opacity 0.2s' }}>{t.nav.products}</Link>
-              <Link href="#contact" style={{ color: '#fff', textDecoration: 'none', fontSize: '15px', fontWeight: '500', opacity: 0.9, transition: 'opacity 0.2s' }}>{t.nav.contact}</Link>
-            </div>
-
-            <div style={{ display: 'flex', gap: '8px', background: 'rgba(255,255,255,0.1)', padding: '4px', borderRadius: '8px' }}>
-              <button onClick={() => setLang('en')} style={{ padding: '6px 14px', background: lang === 'en' ? '#c9a84c' : 'transparent', border: 'none', borderRadius: '6px', color: lang === 'en' ? '#0a1628' : '#fff', fontWeight: '600', fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s' }}>EN</button>
-              <button onClick={() => setLang('zh')} style={{ padding: '6px 14px', background: lang === 'zh' ? '#c9a84c' : 'transparent', border: 'none', borderRadius: '6px', color: lang === 'zh' ? '#0a1628' : '#fff', fontWeight: '600', fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s' }}>中文</button>
-            </div>
-
-            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} style={{ display: 'none', background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }} className="mobile-menu-btn">
-              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          <nav style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
+            <Link href="#services" style={{ color: 'rgba(255,255,255,0.8)', textDecoration: 'none', fontSize: '14px' }}>{lang === 'en' ? 'Services' : '服务'}</Link>
+            <Link href="#products" style={{ color: 'rgba(255,255,255,0.8)', textDecoration: 'none', fontSize: '14px' }}>{lang === 'en' ? 'Products' : '产品'}</Link>
+            <Link href="#contact" style={{ color: 'rgba(255,255,255,0.8)', textDecoration: 'none', fontSize: '14px' }}>{lang === 'en' ? 'Contact' : '联系'}</Link>
+            <button onClick={() => setLang(lang === 'en' ? 'zh' : 'en')} style={{ background: 'rgba(201, 168, 76, 0.2)', border: '1px solid #c9a84c', color: '#c9a84c', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>
+              {lang === 'en' ? '中文' : 'EN'}
             </button>
-          </div>
+            <Link href="/admin" style={{ color: '#c9a84c', textDecoration: 'none', fontSize: '14px' }}>Admin</Link>
+          </nav>
         </div>
-      </nav>
+      </header>
 
-      {/* Hero Section */}
-      <section style={{ paddingTop: '70px', minHeight: '90vh', display: 'flex', alignItems: 'center', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '600px', height: '600px', background: 'radial-gradient(circle, rgba(201, 168, 76, 0.15) 0%, transparent 70%)', borderRadius: '50%' }} />
-        
-        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '80px 24px', position: 'relative', zIndex: 1, textAlign: 'center' }}>
-          <h1 style={{ fontSize: 'clamp(40px, 6vw, 64px)', fontWeight: '800', marginBottom: '24px', background: 'linear-gradient(135deg, #fff 0%, #c9a84c 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-            {t.hero.title}
-          </h1>
-          <p style={{ fontSize: '20px', color: 'rgba(255,255,255,0.7)', maxWidth: '700px', margin: '0 auto 40px', lineHeight: 1.6 }}>
-            {t.hero.subtitle}
-          </p>
-          <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link href="/products" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '16px 32px', background: 'linear-gradient(135deg, #c9a84c, #d4a855)', color: '#0a1628', borderRadius: '8px', fontWeight: '700', fontSize: '16px', textDecoration: 'none', transition: 'transform 0.2s' }}>
-              {t.hero.cta} <ChevronRight size={20} />
-            </Link>
-            <Link href="#contact" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '16px 32px', background: 'transparent', border: '2px solid #c9a84c', color: '#c9a84c', borderRadius: '8px', fontWeight: '700', fontSize: '16px', textDecoration: 'none', transition: 'all 0.2s' }}>
-              {t.hero.cta2}
-            </Link>
-          </div>
+      {/* Hero */}
+      <section style={{ padding: '160px 24px 100px', textAlign: 'center', background: 'linear-gradient(135deg, #0a1628 0%, #0f2744 100%)' }}>
+        <h1 style={{ fontSize: 'clamp(36px, 5vw, 56px)', fontWeight: '700', marginBottom: '24px', color: '#fff' }}>
+          {lang === 'en' ? 'Connecting Businesses Across Borders' : '连接全球商业'}
+        </h1>
+        <p style={{ fontSize: '18px', color: 'rgba(255,255,255,0.7)', maxWidth: '600px', margin: '0 auto 40px', lineHeight: '1.6' }}>
+          {lang === 'en' 
+            ? 'Your trusted partner for international B2B trade. Premium products, reliable suppliers, and seamless transactions.'
+            : '您值得信赖的国际B2B贸易伙伴。优质产品、可靠供应商、无缝交易。'}
+        </p>
+        <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
+          <a href="#contact" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '16px 32px', background: 'linear-gradient(135deg, #c9a84c, #d4a855)', color: '#0a1628', borderRadius: '8px', fontWeight: '600', textDecoration: 'none' }}>
+            {lang === 'en' ? 'Get Started' : '立即开始'} <ArrowRight size={20} />
+          </a>
+          <a href="#products" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '16px 32px', background: 'rgba(255,255,255,0.1)', color: '#fff', borderRadius: '8px', fontWeight: '600', textDecoration: 'none', border: '1px solid rgba(255,255,255,0.2)' }}>
+            {lang === 'en' ? 'View Products' : '查看产品'}
+          </a>
         </div>
       </section>
 
-      {/* Services Section */}
-      <section style={{ padding: '100px 24px', background: 'rgba(255,255,255,0.02)' }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: '40px', fontWeight: '700', textAlign: 'center', marginBottom: '60px', color: '#c9a84c' }}>{t.services.title}</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '32px' }}>
-            {t.services.items.map((service, i) => (
-              <div key={i} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(201, 168, 76, 0.2)', borderRadius: '16px', padding: '40px 32px', transition: 'all 0.3s' }}>
-                <div style={{ width: '64px', height: '64px', background: 'linear-gradient(135deg, rgba(201, 168, 76, 0.2), rgba(201, 168, 76, 0.1))', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
-                  <service.icon size={32} style={{ color: '#c9a84c' }} />
-                </div>
-                <h3 style={{ fontSize: '22px', fontWeight: '600', marginBottom: '12px', color: '#fff' }}>{service.title}</h3>
-                <p style={{ color: 'rgba(255,255,255,0.6)', lineHeight: 1.6 }}>{service.desc}</p>
+      {/* Services */}
+      <section id="services" style={{ padding: '80px 24px', background: '#0a1628' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <h2 style={{ fontSize: '32px', fontWeight: '700', textAlign: 'center', marginBottom: '48px', color: '#c9a84c' }}>
+            {lang === 'en' ? 'Our Services' : '我们的服务'}
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '24px' }}>
+            {services.map((s, i) => (
+              <div key={i} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(201, 168, 76, 0.2)', borderRadius: '16px', padding: '32px', textAlign: 'center', transition: 'all 0.3s' }}>
+                <div style={{ color: '#c9a84c', marginBottom: '16px' }}>{s.icon}</div>
+                <h3 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '12px' }}>{lang === 'en' ? s.titleEn : s.titleZh}</h3>
+                <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px', lineHeight: '1.6' }}>{lang === 'en' ? s.descEn : s.descZh}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Products Section */}
-      <section style={{ padding: '100px 24px' }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '60px' }}>
-            <h2 style={{ fontSize: '40px', fontWeight: '700', color: '#c9a84c' }}>{t.products.title}</h2>
-            <Link href="/products" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#c9a84c', textDecoration: 'none', fontWeight: '600', fontSize: '16px' }}>
-              {t.products.viewAll} <ChevronRight size={20} />
-            </Link>
-          </div>
-          
-          {products.length > 0 ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
-              {products.map((product) => (
-                <Link key={product.id} href={`/products/${product.id}`} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', overflow: 'hidden', textDecoration: 'none', transition: 'all 0.3s' }}>
-                  <div style={{ height: '200px', background: 'rgba(201, 168, 76, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {product.images[0] ? (
-                      <img src={product.images[0]} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      {/* Products */}
+      <section id="products" style={{ padding: '80px 24px', background: '#0f2744' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <h2 style={{ fontSize: '32px', fontWeight: '700', textAlign: 'center', marginBottom: '48px', color: '#c9a84c' }}>
+            {lang === 'en' ? 'Featured Products' : '精选产品'}
+          </h2>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '60px' }}><Loader2 size={40} style={{ color: '#c9a84c', animation: 'spin 1s linear infinite' }} /></div>
+          ) : products.length > 0 ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
+              {products.map((p) => (
+                <div key={p.id} style={{ background: '#0a1628', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(201, 168, 76, 0.2)' }}>
+                  <div style={{ height: '200px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {p.images?.[0] ? (
+                      <img src={p.images[0]} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
-                      <Package size={48} style={{ color: 'rgba(201, 168, 76, 0.3)' }} />
+                      <Package size={48} style={{ color: 'rgba(255,255,255,0.3)' }} />
                     )}
                   </div>
                   <div style={{ padding: '20px' }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#fff', marginBottom: '8px' }}>{product.name}</h3>
-                    <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px', marginBottom: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.description}</p>
+                    <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>{p.name}</h3>
+                    <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px', marginBottom: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.description}</p>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: '#c9a84c', fontWeight: '600' }}>MOQ: {product.moq}</span>
-                      <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Mail size={14} /> {t.products.inquire}
-                      </span>
+                      <span style={{ color: '#c9a84c', fontWeight: '600' }}>${p.price.toLocaleString()}</span>
+                      <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px' }}>MOQ: {p.moq}</span>
                     </div>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           ) : (
-            <div style={{ textAlign: 'center', padding: '60px', color: 'rgba(255,255,255,0.5)' }}>
-              <Package size={64} style={{ marginBottom: '16px', opacity: 0.3 }} />
-              <p>No products available yet</p>
-            </div>
+            <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>{lang === 'en' ? 'No products available' : '暂无产品'}</p>
           )}
+          <div style={{ textAlign: 'center', marginTop: '40px' }}>
+            <Link href="/products" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '14px 28px', background: 'transparent', color: '#c9a84c', borderRadius: '8px', textDecoration: 'none', border: '1px solid #c9a84c' }}>
+              {lang === 'en' ? 'View All Products' : '查看全部产品'} <ArrowRight size={18} />
+            </Link>
+          </div>
         </div>
       </section>
 
-      {/* Contact Form */}
-      <section id="contact" style={{ padding: '100px 24px', background: 'rgba(255,255,255,0.02)' }}>
-        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: '40px', fontWeight: '700', textAlign: 'center', marginBottom: '16px', color: '#c9a84c' }}>{t.contact.title}</h2>
-          <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.6)', marginBottom: '48px' }}>{t.contact.subtitle}</p>
+      {/* Contact */}
+      <section id="contact" style={{ padding: '80px 24px', background: '#0a1628' }}>
+        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+          <h2 style={{ fontSize: '32px', fontWeight: '700', textAlign: 'center', marginBottom: '16px', color: '#c9a84c' }}>
+            {lang === 'en' ? 'Get In Touch' : '联系我们'}
+          </h2>
+          <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.6)', marginBottom: '40px' }}>
+            {lang === 'en' ? 'Send us an inquiry and we will get back to you soon.' : '发送询盘，我们会尽快回复您。'}
+          </p>
           
           {submitted ? (
-            <div style={{ background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)', borderRadius: '12px', padding: '48px', textAlign: 'center' }}>
-              <Send size={48} style={{ color: '#22c55e', marginBottom: '16px' }} />
-              <p style={{ fontSize: '20px', fontWeight: '600', color: '#22c55e' }}>{t.contact.sent}</p>
+            <div style={{ background: 'rgba(34, 197, 94, 0.1)', border: '1px solid #22c55e', borderRadius: '12px', padding: '32px', textAlign: 'center' }}>
+              <p style={{ color: '#22c55e', fontSize: '18px', fontWeight: '600' }}>✅ {lang === 'en' ? 'Thank you! We will contact you soon.' : '谢谢！我们会尽快联系您。'}</p>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '40px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '20px' }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: 'rgba(255,255,255,0.8)' }}>{t.contact.name} *</label>
-                  <input type="text" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} style={{ width: '100%', padding: '14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '15px' }} />
+            <form onSubmit={handleInquirySubmit} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(201, 168, 76, 0.2)', borderRadius: '16px', padding: '32px' }}>
+              <div style={{ display: 'grid', gap: '16px' }}>
+                <input type="text" placeholder={lang === 'en' ? 'Your Name *' : '您的姓名 *'} value={inquiryForm.name} onChange={(e) => setInquiryForm({...inquiryForm, name: e.target.value})} required style={{ padding: '14px 16px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: '#fff', fontSize: '16px' }} />
+                <input type="email" placeholder={lang === 'en' ? 'Email Address *' : '电子邮箱 *'} value={inquiryForm.email} onChange={(e) => setInquiryForm({...inquiryForm, email: e.target.value})} required style={{ padding: '14px 16px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: '#fff', fontSize: '16px' }} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <input type="text" placeholder={lang === 'en' ? 'Phone' : '电话'} value={inquiryForm.phone} onChange={(e) => setInquiryForm({...inquiryForm, phone: e.target.value})} style={{ padding: '14px 16px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: '#fff', fontSize: '16px' }} />
+                  <input type="text" placeholder={lang === 'en' ? 'Country' : '国家'} value={inquiryForm.country} onChange={(e) => setInquiryForm({...inquiryForm, country: e.target.value})} style={{ padding: '14px 16px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: '#fff', fontSize: '16px' }} />
                 </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: 'rgba(255,255,255,0.8)' }}>{t.contact.email} *</label>
-                  <input type="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} style={{ width: '100%', padding: '14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '15px' }} />
-                </div>
+                <textarea placeholder={lang === 'en' ? 'Your Message *' : '您的留言 *'} value={inquiryForm.message} onChange={(e) => setInquiryForm({...inquiryForm, message: e.target.value})} required rows={4} style={{ padding: '14px 16px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', color: '#fff', fontSize: '16px', resize: 'vertical' }} />
+                <button type="submit" disabled={submitting} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '16px', background: 'linear-gradient(135deg, #c9a84c, #d4a855)', color: '#0a1628', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: '600', cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.7 : 1 }}>
+                  {submitting ? <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={20} />}
+                  {lang === 'en' ? 'Send Inquiry' : '发送询盘'}
+                </button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '20px' }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: 'rgba(255,255,255,0.8)' }}>{t.contact.phone}</label>
-                  <input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} style={{ width: '100%', padding: '14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '15px' }} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: 'rgba(255,255,255,0.8)' }}>{t.contact.country}</label>
-                  <input type="text" value={formData.country} onChange={(e) => setFormData({ ...formData, country: e.target.value })} style={{ width: '100%', padding: '14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '15px' }} />
-                </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '20px' }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: 'rgba(255,255,255,0.8)' }}>{t.contact.company}</label>
-                  <input type="text" value={formData.company} onChange={(e) => setFormData({ ...formData, company: e.target.value })} style={{ width: '100%', padding: '14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '15px' }} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: 'rgba(255,255,255,0.8)' }}>{t.contact.product}</label>
-                  <input type="text" value={formData.product} onChange={(e) => setFormData({ ...formData, product: e.target.value })} style={{ width: '100%', padding: '14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '15px' }} />
-                </div>
-              </div>
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: 'rgba(255,255,255,0.8)' }}>{t.contact.message} *</label>
-                <textarea required rows={5} value={formData.message} onChange={(e) => setFormData({ ...formData, message: e.target.value })} style={{ width: '100%', padding: '14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '15px', resize: 'vertical' }} />
-              </div>
-              <button type="submit" disabled={submitting} style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #c9a84c, #d4a855)', color: '#0a1628', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: '700', cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.7 : 1, transition: 'opacity 0.2s' }}>
-                {submitting ? t.contact.sending : t.contact.send}
-              </button>
             </form>
           )}
         </div>
       </section>
 
       {/* Footer */}
-      <footer style={{ background: 'rgba(0,0,0,0.3)', borderTop: '1px solid rgba(201, 168, 76, 0.2)', padding: '60px 24px' }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '48px', marginBottom: '48px' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-                <span style={{ fontSize: '32px' }}>🏢</span>
-                <span style={{ fontSize: '22px', fontWeight: '700', color: '#c9a84c' }}>ALOKAIBI</span>
-              </div>
-              <p style={{ color: 'rgba(255,255,255,0.6)', lineHeight: 1.6 }}>{t.footer.desc}</p>
-            </div>
-            <div>
-              <h4 style={{ color: '#c9a84c', fontWeight: '600', marginBottom: '20px', fontSize: '16px' }}>Quick Links</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <Link href="/" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none', fontSize: '14px' }}>{t.nav.home}</Link>
-                <Link href="/products" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none', fontSize: '14px' }}>{t.nav.products}</Link>
-                <Link href="#contact" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none', fontSize: '14px' }}>{t.nav.contact}</Link>
-              </div>
-            </div>
-            <div>
-              <h4 style={{ color: '#c9a84c', fontWeight: '600', marginBottom: '20px', fontSize: '16px' }}>Contact Info</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'rgba(255,255,255,0.6)', fontSize: '14px' }}>
-                  <Mail size={16} /> info@newway2trade.com
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'rgba(255,255,255,0.6)', fontSize: '14px' }}>
-                  <Phone size={16} /> +60 12-345-6789
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'rgba(255,255,255,0.6)', fontSize: '14px' }}>
-                  <MapPin size={16} /> Malaysia
-                </div>
-              </div>
-            </div>
-          </div>
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '32px', textAlign: 'center' }}>
-            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '14px' }}>© {new Date().getFullYear()} {t.footer.company}. {t.footer.rights}</p>
-          </div>
+      <footer style={{ padding: '40px 24px', background: '#070d18', borderTop: '1px solid rgba(201, 168, 76, 0.2)' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', textAlign: 'center' }}>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px' }}>
+            © 2026 ALOKAIBI International Trading. All rights reserved.
+          </p>
         </div>
       </footer>
 
-      <style>{`
-        @media (max-width: 768px) {
-          .nav-links { display: none !important; }
-          .mobile-menu-btn { display: block !important; }
-        }
-        a:hover { opacity: 0.8 }
-        input:focus, textarea:focus { outline: none; border-color: #c9a84c !important; }
-      `}</style>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
